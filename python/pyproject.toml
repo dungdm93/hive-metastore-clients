@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hive-metastore"
+authors = [
+    { name = "Dũng Đặng Minh", email = "dungdm93@live.com" },
+]
+description = "Python client for Hive metastore (HMS)"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["hive", "metastore"]
+license = { text = "Apache 2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+]
+version = "0.1.0"
+
+[tool.setuptools]
+packages = ["hive_metastore"]
