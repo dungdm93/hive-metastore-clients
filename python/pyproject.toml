@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "thrift>=0.16.0,<1.0.0"
 ]
 version = "0.1.0"
 
