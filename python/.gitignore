@@ -181,3 +181,7 @@ pyrightconfig.json
 [Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
+
+### Custom ###
+hive_metastore/thrift/internal
+hive_metastore/facebook
