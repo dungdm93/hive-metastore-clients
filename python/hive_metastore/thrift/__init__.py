@@ -89,12 +89,13 @@ class ThriftHiveMetastore:
         self._transport.close()
 
     def set_meta_conf(self, key: str, value: str) -> None:
-        pass
+        self._client.setMetaConf(key, value)
 
     def get_meta_conf(self, key: str) -> str:
-        pass
+        return self._client.getMetaConf(key)
 
-    def default_catalog(self) -> str:
+    @staticmethod
+    def default_catalog() -> str:
         return DEFAULT_CATALOG_NAME
 
     @staticmethod
