@@ -295,7 +295,7 @@ class ThriftHiveMetastore:
 
     # endregion table
     # region constraints
-    def add_primary_key(self, primary_keys: list[SQLPrimaryKey]) -> None:
+    def add_primary_keys(self, primary_keys: list[SQLPrimaryKey]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), primary_keys)
         self._client.add_primary_key(AddPrimaryKeyRequest(primary_keys))
@@ -310,7 +310,7 @@ class ThriftHiveMetastore:
         res: PrimaryKeysResponse = self._client.get_primary_keys(req)
         return res.primaryKeys
 
-    def add_foreign_key(self, foreign_keys: list[SQLForeignKey]) -> None:
+    def add_foreign_keys(self, foreign_keys: list[SQLForeignKey]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), foreign_keys)
         self._client.add_foreign_key(AddForeignKeyRequest(foreign_keys))
@@ -329,7 +329,7 @@ class ThriftHiveMetastore:
         res: ForeignKeysResponse = self._client.get_foreign_keys(req)
         return res.foreignKeys
 
-    def add_unique_constraint(self, unique_constraints: list[SQLUniqueConstraint]) -> None:
+    def add_unique_constraints(self, unique_constraints: list[SQLUniqueConstraint]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), unique_constraints)
         self._client.add_unique_constraint(AddUniqueConstraintRequest(unique_constraints))
@@ -344,7 +344,7 @@ class ThriftHiveMetastore:
         res: UniqueConstraintsResponse = self._client.get_unique_constraints(req)
         return res.uniqueConstraints
 
-    def add_not_null_constraint(self, not_null_constraints: list[SQLNotNullConstraint]) -> None:
+    def add_not_null_constraints(self, not_null_constraints: list[SQLNotNullConstraint]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), not_null_constraints)
         self._client.add_not_null_constraint(AddNotNullConstraintRequest(not_null_constraints))
@@ -359,7 +359,7 @@ class ThriftHiveMetastore:
         res: NotNullConstraintsResponse = self._client.get_not_null_constraints(req)
         return res.notNullConstraints
 
-    def add_default_constraint(self, default_constraints: list[SQLDefaultConstraint]) -> None:
+    def add_default_constraints(self, default_constraints: list[SQLDefaultConstraint]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), default_constraints)
         self._client.add_default_constraint(AddDefaultConstraintRequest(default_constraints))
@@ -374,7 +374,7 @@ class ThriftHiveMetastore:
         res: DefaultConstraintsResponse = self._client.get_default_constraints(req)
         return res.defaultConstraints
 
-    def add_check_constraint(self, check_constraints: list[SQLCheckConstraint]) -> None:
+    def add_check_constraints(self, check_constraints: list[SQLCheckConstraint]) -> None:
         default_catalog = self.default_catalog()
         map(lambda c: self._set_catalog(default_catalog, c), check_constraints)
         self._client.add_check_constraint(AddCheckConstraintRequest(check_constraints))
