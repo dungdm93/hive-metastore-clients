@@ -33,7 +33,7 @@ from .internal.ttypes import (
     EnvironmentContext, NoSuchObjectException, GetTableRequest, GetTablesRequest, GetTablesResult, PrimaryKeysRequest,
     PrimaryKeysResponse, ForeignKeysRequest, ForeignKeysResponse, UniqueConstraintsRequest, UniqueConstraintsResponse,
     NotNullConstraintsRequest, NotNullConstraintsResponse, DefaultConstraintsRequest, DefaultConstraintsResponse,
-    CheckConstraintsResponse, CheckConstraintsRequest,
+    CheckConstraintsResponse, CheckConstraintsRequest, Partition, PartitionSpec,
 )
 
 if TYPE_CHECKING:
@@ -395,6 +395,49 @@ class ThriftHiveMetastore:
         self._client.drop_constraint(DropConstraintRequest(database_name, table_name, constraint_name, catalog_name))
 
     # endregion constraints
+    # region partition
+    def add_partitions(self, partitions: list[Partition]) -> int:
+        default_catalog = self.default_catalog()
+        map(lambda c: self._set_catalog(default_catalog, c), partitions)
+        return self._client.add_partitions(partitions)
+
+    def append_partition(self, part_vals: list[str],
+                         table_name: str, database_name: str, catalog_name: str | None = None,
+                         env_context: EnvironmentContext | None = None) -> Partition:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.append_partition_with_environment_context(
+            database_fqdn, table_name, part_vals, env_context
+        )
+
+    def append_partition_by_name(self, part_name: str,
+                                 table_name: str, database_name: str, catalog_name: str | None = None,
+                                 env_context: EnvironmentContext | None = None) -> Partition:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.append_partition_by_name_with_environment_context(
+            database_fqdn, table_name, part_name, env_context
+        )
+
+    def get_partition(self, part_vals: list[str],
+                      table_name: str, database_name: str, catalog_name: str | None = None) -> Partition:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_partition(database_fqdn, table_name, part_vals)
+
+    def get_partition_by_name(self, part_name: str,
+                              table_name: str, database_name: str, catalog_name: str | None = None) -> Partition:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_partition_by_name(database_fqdn, table_name, part_name)
+
+    def get_partitions(self, table_name: str, database_name: str, catalog_name: str | None = None,
+                       max_parts: int = -1) -> list[Partition]:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_partitions(database_fqdn, table_name, max_parts)
+
+    def get_partition_names(self, table_name: str, database_name: str, catalog_name: str | None = None,
+                            max_parts: int = -1) -> list[str]:
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_partition_names(database_fqdn, table_name, max_parts)
+
+    # endregion partition
 
     def create_type(self, type: Type) -> bool:
         return self._client.create_type(type)
