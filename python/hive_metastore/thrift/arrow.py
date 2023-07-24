@@ -1,15 +1,46 @@
 import logging
 import re
+from dataclasses import dataclass
 from typing import Iterator
+from urllib.parse import urlparse
 
 import pyarrow as pa
-from pyarrow.dataset import dataset
-from pyarrow.fs import S3FileSystem
+from pyarrow.dataset import dataset, FileFormat
+from pyarrow.fs import FileSystem, S3FileSystem
 
 from . import ThriftHiveMetastore
 from .internal.ttypes import Table, FieldSchema, StorageDescriptor
 
 logger = logging.Logger(__name__)
+
+
+@dataclass
+class HiveSerDe:
+    input_format: str
+    output_format: str
+    serde: str
+
+
+## See: https://github.com/apache/spark/blob/v3.4.0/sql/core/src/main/scala/org/apache/spark/sql/internal/HiveSerDe.scala#L30-L66
+SERDE_MAP = dict(
+    parquet=HiveSerDe(
+        input_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+        output_format="org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+        serde="org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+    ),
+    orc=HiveSerDe(
+        input_format="org.apache.hadoop.hive.ql.io.orc.OrcInputFormat",
+        output_format="org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat",
+        serde="org.apache.hadoop.hive.ql.io.orc.OrcSerde"
+    ),
+    # Avro is not supported yet.
+    # See: https://issues.apache.org/jira/browse/ARROW-1209
+    # avro=HiveSerDe(
+    #     input_format="org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat",
+    #     output_format="org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat",
+    #     serde="org.apache.hadoop.hive.serde2.avro.AvroSerDe",
+    # )
+)
 
 
 def unquote(string: str, quote: str = '"', escape: str = "\\") -> str:
@@ -145,6 +176,15 @@ def parse_dtype(dtype: str) -> pa.DataType:
         return pa.null()
 
 
+def strip_scheme(path: str, scheme: str) -> str:
+    pr = urlparse(path)
+    if pr.scheme != scheme:
+        raise RuntimeError(f"Path {path} missmatch with scheme {scheme}")
+    schemaless = pr._replace(scheme='').geturl()
+    schemaless = schemaless.strip("/")
+    return f"{schemaless}/"
+
+
 def convert_fields(field: FieldSchema) -> pa.Field:
     dtype = parse_dtype(field.type)
     metadata = dict(comment=field.comment) if field.comment else None
@@ -156,3 +196,46 @@ def convert_schema(cols: list[FieldSchema], part_cols: list[FieldSchema]) -> pa.
     part_fields = [convert_fields(c) for c in part_cols]
     return pa.schema(fields + part_fields)
 
+
+def create_fs(hive: ThriftHiveMetastore, scheme: str) -> FileSystem:  # noqa
+    if scheme in ("s3", "s3n", "s3a"):
+        return S3FileSystem(
+            endpoint_override="http://localhost:9000",
+            access_key="admin",
+            secret_key="SuperSecr3t",
+            region="aws-global",
+        )
+    raise RuntimeError(f"Unsupported scheme {scheme}")
+
+
+def create_format(sd: StorageDescriptor) -> FileFormat | str:
+    input_format = sd.inputFormat
+    for fmt, serde in SERDE_MAP.items():
+        if serde.input_format == input_format:
+            return fmt
+    raise RuntimeError(f"Unsupported inputFormat {input_format}")
+
+
+def to_arrow(hive: ThriftHiveMetastore, table: Table) -> pa.Table:
+    sd: StorageDescriptor = table.sd
+    schema = convert_schema(sd.cols, table.partitionKeys)
+
+    if not table.partitionKeys:
+        source = [sd.location]
+    else:
+        partitions = hive.get_partitions(table.tableName, table.dbName, table.catName)
+        source = [p.sd.location for p in partitions]
+    scheme = urlparse(source[0]).scheme
+    source = [strip_scheme(s, scheme) for s in source]
+    fs = create_fs(hive, scheme)
+    fmt = create_format(sd)
+
+    ds = dataset(
+        source=source,
+        schema=schema,
+        format=fmt,
+        filesystem=fs,
+        partitioning="hive",
+        partition_base_dir=sd.location,
+    )
+    return ds.to_table()
