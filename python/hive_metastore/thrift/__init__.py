@@ -279,6 +279,20 @@ class ThriftHiveMetastore:
         else:
             return self._client.get_tables(database_fqdn, table_pattern)
 
+    def get_fields(self, table_name: str, database_name: str, catalog_name: str | None = None) -> list[FieldSchema]:
+        """
+        gets a list of FieldSchemas describing the columns of a particular table
+        """
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_fields(database_fqdn, table_name)
+
+    def get_schema(self, table_name: str, database_name: str, catalog_name: str | None = None) -> list[FieldSchema]:
+        """
+        gets a list of FieldSchemas describing both the columns and the partition keys of a particular table
+        """
+        database_fqdn = self.prepend_catalog_to_database(database_name, catalog_name)
+        return self._client.get_schema(database_fqdn, table_name)
+
     # endregion table
     # region constraints
     def add_primary_key(self, primary_keys: list[SQLPrimaryKey]) -> None:
